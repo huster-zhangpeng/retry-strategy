@@ -1,0 +1,19 @@
+[package]
+name = "timeout-strategy"
+version = "0.1.0"
+edition = "2022"
+authors = ["Zhang Peng"]
+description = "A better timeout timer strategy set"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = "1"
+futures = "0.3"
+
+[profile.release]
+opt-level = 'z'     # Optimize for size.
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
