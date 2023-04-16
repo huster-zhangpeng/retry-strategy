@@ -1,15 +1,16 @@
 [package]
 name = "timeout-strategy"
 version = "0.1.0"
-edition = "2022"
+edition = "2021"
 authors = ["Zhang Peng"]
 description = "A better timeout timer strategy set"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = "1"
+tokio = {version = "1", features = ["time", "rt", "macros"]}
 futures = "0.3"
+pin-project = "1"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size.
