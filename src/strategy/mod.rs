@@ -9,27 +9,6 @@ mod random;
 #[cfg(feature = "random")]
 pub use random::{jitter, Range};
 
-#[derive(Debug)]
-pub struct Opportunity(pub Vec<u64>);
-
-impl IntoIterator for Opportunity {
-    type Item = Duration;
-    type IntoIter = std::iter::Map<std::vec::IntoIter<u64>, fn(u64) -> Duration>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter().map(Duration::from_millis)
-    }
-}
-
-#[test]
-fn test_opportunity() {
-    let mut iter = Opportunity(vec![100, 200, 300]).into_iter();
-    assert_eq!(iter.next(), Some(Duration::from_millis(100)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(200)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(300)));
-    assert_eq!(iter.next(), None);
-}
-
 /// Each retry increases the delay since the last exponentially.
 #[derive(Debug)]
 pub struct Exponential {
@@ -90,24 +69,6 @@ impl From<Duration> for Exponential {
     }
 }
 
-#[test]
-fn exponential_with_factor() {
-    let mut iter = Exponential::from_millis_with_factor(1000, 2.0);
-    assert_eq!(iter.next(), Some(Duration::from_millis(1000)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(2000)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(4000)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(8000)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(16000)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(32000)));
-}
-
-#[test]
-fn exponential_overflow() {
-    let mut iter = Exponential::from_millis(U64_MAX);
-    assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
-}
-
 /// Each retry uses a delay which is the sum of the two previous delays.
 ///
 /// Depending on the problem at hand, a fibonacci delay strategy might perform better and lead to
@@ -156,24 +117,6 @@ impl From<Duration> for Fibonacci {
     }
 }
 
-#[test]
-fn fibonacci() {
-    let mut iter = Fibonacci::from_millis(10);
-    assert_eq!(iter.next(), Some(Duration::from_millis(10)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(10)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(20)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(30)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(50)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(80)));
-}
-
-#[test]
-fn fibonacci_saturated() {
-    let mut iter = Fibonacci::from_millis(U64_MAX);
-    assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
-    assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
-}
-
 /// Each retry uses a fixed delay.
 #[derive(Debug)]
 pub struct Fixed {
@@ -199,9 +142,7 @@ impl Iterator for Fixed {
 
 impl From<Duration> for Fixed {
     fn from(delay: Duration) -> Self {
-        Self {
-            duration: delay.into(),
-        }
+        Self { duration: delay }
     }
 }
 
@@ -214,5 +155,58 @@ impl Iterator for NoDelay {
 
     fn next(&mut self) -> Option<Duration> {
         Some(Duration::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Exponential, Fibonacci};
+    use crate::ToDuration;
+    use std::time::Duration;
+    use std::u64::MAX as U64_MAX;
+
+    #[test]
+    fn test_opportunity() {
+        let mut iter = vec![100.ms(), 200.ms(), 300.ms()].into_iter();
+        assert_eq!(iter.next(), Some(Duration::from_millis(100)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(200)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(300)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn exponential_with_factor() {
+        let mut iter = Exponential::from_millis_with_factor(1000, 2.0);
+        assert_eq!(iter.next(), Some(Duration::from_millis(1000)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(2000)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(4000)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(8000)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(16000)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(32000)));
+    }
+
+    #[test]
+    fn exponential_overflow() {
+        let mut iter = Exponential::from_millis(U64_MAX);
+        assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
+    }
+
+    #[test]
+    fn fibonacci() {
+        let mut iter = Fibonacci::from_millis(10);
+        assert_eq!(iter.next(), Some(Duration::from_millis(10)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(10)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(20)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(30)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(50)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(80)));
+    }
+
+    #[test]
+    fn fibonacci_saturated() {
+        let mut iter = Fibonacci::from_millis(U64_MAX);
+        assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
+        assert_eq!(iter.next(), Some(Duration::from_millis(U64_MAX)));
     }
 }

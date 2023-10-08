@@ -7,14 +7,62 @@ use std::{
 };
 use tokio::time::{sleep, Sleep};
 
-mod error;
-mod strategy;
+pub mod error;
+pub mod strategy;
+
+pub trait ToDuration {
+    fn s(self) -> Duration;
+    fn ms(self) -> Duration;
+    fn ns(self) -> Duration;
+}
+
+impl ToDuration for u64 {
+    fn s(self) -> Duration {
+        Duration::from_secs(self)
+    }
+
+    fn ms(self) -> Duration {
+        Duration::from_millis(self)
+    }
+
+    fn ns(self) -> Duration {
+        Duration::from_nanos(self)
+    }
+}
+
+impl ToDuration for f64 {
+    fn s(self) -> Duration {
+        Duration::from_secs_f64(self)
+    }
+
+    fn ms(self) -> Duration {
+        Duration::from_secs_f64(self / 1000.0)
+    }
+
+    fn ns(self) -> Duration {
+        Duration::from_secs_f64(self / 1_000_000_000.0)
+    }
+}
+
+impl ToDuration for f32 {
+    fn s(self) -> Duration {
+        Duration::from_secs_f32(self)
+    }
+
+    fn ms(self) -> Duration {
+        Duration::from_secs_f32(self / 1000.0)
+    }
+
+    fn ns(self) -> Duration {
+        Duration::from_secs_f32(self / 1_000_000_000.0)
+    }
+}
 
 ///
 /// # Example
 /// ```
 /// let res = retry(
-///     Opportunity(vec![100, 200, 300]),
+///     vec![100.ms(), 200.ms(), 300.ms()],
 ///     |n| async move {
 ///         sleep(Duration::from_millis(250)).await;
 ///         n
@@ -30,12 +78,14 @@ where
     Retry {
         strategy: iter.into_iter(),
         action,
-        state: RetryState::Initing,
+        state: RetryState::default(),
     }
 }
 
 #[pin_project(project = RetryStateProj)]
+#[derive(Default)]
 enum RetryState<F> {
+    #[default]
     Initing,
     Running(i32, #[pin] Sleep, #[pin] F),
 }
@@ -113,9 +163,14 @@ where
     }
 }
 
+pub mod prelude {
+    pub use super::error::Exhausted;
+    pub use super::strategy::{Exponential, Fibonacci, Fixed, NoDelay};
+    pub use super::{retry, Retry, ToDuration};
+}
+
 #[cfg(test)]
 mod tests {
-    use super::strategy::Opportunity;
     use super::*;
     use std::sync::{Arc, Mutex};
 
@@ -124,7 +179,7 @@ mod tests {
         let counter = Arc::new(Mutex::new(0));
         let m = &counter;
 
-        let res = retry(Opportunity(vec![100, 200, 300]), |n| async move {
+        let res = retry(vec![100.ms(), 200.ms(), 300.ms()], |n| async move {
             {
                 let mut lock = m.lock().unwrap();
                 assert_eq!(*lock, n);

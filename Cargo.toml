@@ -1,6 +1,6 @@
 [package]
 name = "retry-strategy"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Zhang Peng"]
 documentation = "https://docs.rs/retry-strategy"
@@ -8,7 +8,7 @@ homepage = "https://github.com/huster-zhangpeng/retry-strategy"
 keywords = ["retry", "timeout", "async", "tokio", "utility"]
 license = "MIT"
 readme = "README.md"
-description = "A better retry strategy set for tokio async futures"
+description = "A better asynchronous retry tool based on Tokio."
 
 [dependencies]
 tokio = {version = "1", features = ["time", "rt", "macros", "net"]}
